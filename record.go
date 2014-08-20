@@ -38,6 +38,29 @@ func (r *RecordsResponse) FindRecord(id string) (*Record, error) {
 	return nil, notFoundErr
 }
 
+func (r *RecordsResponse) FindRecordByName(name string) (*Record, error) {
+	if r.Result == "error" {
+		return nil, fmt.Errorf("API Error: %s", r.Message)
+	}
+
+	objs := r.Response.Recs.Records
+	notFoundErr := errors.New("Record not found")
+
+	// No objects, return nil
+	if len(objs) < 0 {
+		return nil, notFoundErr
+	}
+
+	for _, v := range objs {
+		// We have a match, return that
+		if v.Name == name {
+			return &v, nil
+		}
+	}
+
+	return nil, notFoundErr
+}
+
 type RecordResponse struct {
 	Response struct {
 		Rec struct {
@@ -178,6 +201,7 @@ type UpdateRecord struct {
 	Content  string
 	Ttl      string
 	Priority string
+	ServiceMode string
 }
 
 // UpdateRecord destroys a record by the ID specified and
@@ -205,6 +229,11 @@ func (c *Client) UpdateRecord(domain string, id string, opts *UpdateRecord) erro
 	if opts.Ttl != "" {
 		params["ttl"] = opts.Ttl
 	}
+
+	if opts.ServiceMode != "" {
+		params["service_mode"] = opts.ServiceMode	
+	}
+	
 
 	req, err := c.NewRequest(params, "POST", "rec_edit")
 	if err != nil {
@@ -237,6 +266,25 @@ func (c *Client) UpdateRecord(domain string, id string, opts *UpdateRecord) erro
 // returns a Record and an error. An error will be returned for failed
 // requests with a nil Record.
 func (c *Client) RetrieveRecord(domain string, id string) (*Record, error) {
+	records, err := c.loadAll(domain)
+	if err != nil {
+		return nil, err
+	}
+
+	record, err := records.FindRecord(id)
+	if err != nil {
+		return nil, err
+	}
+
+	// The request was successful
+	return record, nil
+}
+
+// RetrieveRecord gets  a record by the ID specified and
+// returns a Record and an error. An error will be returned for failed
+// requests with a nil Record.
+func (c *Client) RetrieveRecordByName(domain string, name string) (*Record, error) {
+	/*
 	params := make(map[string]string)
 	// The zone we want
 	params["z"] = domain
@@ -260,12 +308,47 @@ func (c *Client) RetrieveRecord(domain string, id string) (*Record, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error decoding record response: %s", err)
 	}
+	*/
 
-	record, err := records.FindRecord(id)
+	records, err := c.loadAll(domain)
+	if err != nil {
+		return nil, err
+	}
+
+
+	record, err := records.FindRecordByName(name)
 	if err != nil {
 		return nil, err
 	}
 
 	// The request was successful
 	return record, nil
+}
+
+func (c *Client) loadAll(domain string) (*RecordsResponse, error) {
+	params := make(map[string]string)
+	// The zone we want
+	params["z"] = domain
+
+	req, err := c.NewRequest(params, "GET", "rec_load_all")
+
+	if err != nil {
+		return nil, fmt.Errorf("Error creating request: %s", err)
+	}
+
+	resp, err := checkResp(c.Http.Do(req))
+	if err != nil {
+		return nil, fmt.Errorf("Error destroying record: %s", err)
+	}
+
+	records := new(RecordsResponse)
+
+	err = decodeBody(resp, records)
+
+	if err != nil {
+		return nil, fmt.Errorf("Error decoding record response: %s", err)
+	}
+
+	// The request was successful
+	return records, nil
 }
