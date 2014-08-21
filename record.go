@@ -266,7 +266,7 @@ func (c *Client) UpdateRecord(domain string, id string, opts *UpdateRecord) erro
 // returns a Record and an error. An error will be returned for failed
 // requests with a nil Record.
 func (c *Client) RetrieveRecord(domain string, id string) (*Record, error) {
-	records, err := c.loadAll(domain)
+	records, err := c.LoadAll(domain)
 	if err != nil {
 		return nil, err
 	}
@@ -284,33 +284,7 @@ func (c *Client) RetrieveRecord(domain string, id string) (*Record, error) {
 // returns a Record and an error. An error will be returned for failed
 // requests with a nil Record.
 func (c *Client) RetrieveRecordByName(domain string, name string) (*Record, error) {
-	/*
-	params := make(map[string]string)
-	// The zone we want
-	params["z"] = domain
-	params["id"] = id
-
-	req, err := c.NewRequest(params, "GET", "rec_load_all")
-
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := checkResp(c.Http.Do(req))
-	if err != nil {
-		return nil, fmt.Errorf("Error destroying record: %s", err)
-	}
-
-	records := new(RecordsResponse)
-
-	err = decodeBody(resp, records)
-
-	if err != nil {
-		return nil, fmt.Errorf("Error decoding record response: %s", err)
-	}
-	*/
-
-	records, err := c.loadAll(domain)
+	records, err := c.LoadAll(domain)
 	if err != nil {
 		return nil, err
 	}
@@ -325,7 +299,7 @@ func (c *Client) RetrieveRecordByName(domain string, name string) (*Record, erro
 	return record, nil
 }
 
-func (c *Client) loadAll(domain string) (*RecordsResponse, error) {
+func (c *Client) LoadAll(domain string) (*RecordsResponse, error) {
 	params := make(map[string]string)
 	// The zone we want
 	params["z"] = domain
